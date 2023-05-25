@@ -18,6 +18,7 @@ type Sample struct {
 	Duration time.Duration
 }
 
+// Pipeline represents a GStreamer pipeline instance.
 type Pipeline interface {
 	Start() error
 	Recv() (Sample, error)
@@ -37,6 +38,7 @@ type pipeline struct {
 	has_started bool
 }
 
+// NewPipeline builds a GStreamer pipeline.
 func NewPipeline(expr string) (Pipeline, error) {
 	expr = expr + " ! appsink name=appsink"
 

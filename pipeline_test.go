@@ -1,6 +1,7 @@
 package gstpl_test
 
 import (
+	"errors"
 	"io"
 	"sync"
 	"testing"
@@ -59,7 +60,7 @@ func TestPipelineRecv(t *testing.T) {
 
 	for {
 		sample, err := pl.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 
@@ -85,7 +86,7 @@ func TestPipelineCloseWhilePlaying(t *testing.T) {
 
 	for {
 		sample, err := pl.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 
@@ -119,7 +120,7 @@ func TestMultiplePipelines(t *testing.T) {
 
 		for i := 0; i < 10; i++ {
 			sample, err := pl.Recv()
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 
@@ -225,7 +226,7 @@ func TestPipelineEndOfStream(t *testing.T) {
 	for ; i < 10; i++ {
 		var sample gstpl.Sample
 		sample, err = pl.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 
