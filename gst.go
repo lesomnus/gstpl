@@ -34,8 +34,8 @@ func goHandleSample(handler unsafe.Pointer, buff unsafe.Pointer, len C.int, dura
 	sample := Sample{Data: C.GoBytes(buff, len), Duration: time.Duration(duration)}
 
 	select {
+	case <-pl.ctx.Done():
 	case pl.samples <- sample:
-	default:
 	}
 }
 
@@ -51,9 +51,13 @@ func goHandleError(handler unsafe.Pointer, gerr *C.GError) {
 	}
 }
 
+func loopCtxRefCnt() int {
+	return int(C.gstpl_ref_cnt())
+}
+
 func init() {
 	var gerr *C.GError
-	if !C.gstpl_gst_init(&gerr) {
+	if !C.gstpl_init(&gerr) {
 		panic(gerror(gerr))
 	}
 }

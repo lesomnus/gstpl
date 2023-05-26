@@ -33,9 +33,8 @@ type pipeline struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	err atomic.Value
-
-	has_started bool
+	err       atomic.Value
+	is_closed atomic.Bool
 }
 
 // NewPipeline builds a GStreamer pipeline.
@@ -70,12 +69,8 @@ func (p *pipeline) Start() error {
 	if p.gst_ctx == nil {
 		return io.ErrClosedPipe
 	}
-	if p.has_started {
-		return nil
-	}
 
 	C.gstpl_ctx_start(p.gst_ctx)
-	p.has_started = true
 	return nil
 }
 
@@ -93,11 +88,10 @@ func (p *pipeline) Recv() (Sample, error) {
 }
 
 func (p *pipeline) Close() error {
-	if p.gst_ctx == nil {
+	if p.is_closed.Swap(true) {
 		return nil
 	}
 
-	// p.gst_ctx.handler = nil
 	C.gstpl_ctx_free(p.gst_ctx)
 	p.gst_ctx = nil
 

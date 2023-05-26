@@ -3,7 +3,7 @@ FROM ghcr.io/lesomnus/dev-golang:1.19
 RUN apt-get update \
 	&& apt-get install --yes --no-install-recommends \
 		libgstreamer1.0-dev \
-		libgstreamer-plugins-base1.0-dev \
+		gstreamer1.0-plugins-base \
 	&& apt-get clean --yes \
 	&& rm -rf /var/lib/apt/lists/*
 

@@ -65,7 +65,7 @@ static void gstpl_main_loop_unref_() {
 	gstpl_main_loop_unlock_();
 }
 
-bool gstpl_gst_init(GError** err) {
+bool gstpl_init(GError** err) {
 	static gboolean ok = false;
 	if(ok) {
 		return ok;
@@ -80,6 +80,13 @@ bool gstpl_gst_init(GError** err) {
 	}
 
 	return ok = gst_init_check(NULL, NULL, err);
+}
+
+int gstpl_ref_cnt() {
+	gstpl_main_loop_lock_();
+	int const cnt = gstpl_main_loop_ctx.ref;
+	gstpl_main_loop_unlock_();
+	return cnt;
 }
 
 static gboolean gstpl_watch_bus_(GstBus* bus, GstMessage* msg, gpointer data) {
@@ -111,17 +118,15 @@ static gboolean gstpl_watch_bus_(GstBus* bus, GstMessage* msg, gpointer data) {
 }
 
 static GstFlowReturn gstpl_handle_sample_(GstElement* object, gpointer data) {
-	GstSample* sample    = NULL;
-	GstBuffer* buffer    = NULL;
-	gpointer   copy      = NULL;
-	gsize      copy_size = 0;
+	Context* const ctx = (Context*)data;
 
-	Context* ctx = (Context*)data;
-
+	GstSample* sample = NULL;
 	g_signal_emit_by_name(object, "pull-sample", &sample);
 	if(sample) {
-		buffer = gst_sample_get_buffer(sample);
+		GstBuffer* const buffer = gst_sample_get_buffer(sample);
 		if(buffer) {
+			gpointer copy      = NULL;
+			gsize    copy_size = 0;
 			gst_buffer_extract_dup(buffer, 0, gst_buffer_get_size(buffer), &copy, &copy_size);
 			goHandleSample(ctx->handler, copy, copy_size, GST_BUFFER_DURATION(buffer));
 		}
@@ -132,13 +137,12 @@ static GstFlowReturn gstpl_handle_sample_(GstElement* object, gpointer data) {
 }
 
 Context* gstpl_ctx_new(char* expr, GError** err) {
-	GstElement* pipeline = gst_parse_launch(expr, err);
+	GstElement* const pipeline = gst_parse_launch(expr, err);
 	if(pipeline == NULL) {
 		return NULL;
 	}
 
 	Context* ctx  = malloc(sizeof(Context));
-	ctx->started  = false;
 	ctx->pipeline = pipeline;
 	{
 		GstBus* bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
@@ -152,6 +156,7 @@ Context* gstpl_ctx_new(char* expr, GError** err) {
 		gst_object_unref(appsink);
 	}
 
+	gstpl_main_loop_ref_();
 	return ctx;
 }
 
@@ -161,16 +166,10 @@ void gstpl_ctx_free(Context* ctx) {
 	ctx->handler  = NULL;
 	ctx->pipeline = NULL;
 
-	if(ctx->started) {
-		ctx->started = false;
-		gstpl_main_loop_unref_();
-	}
-
+	gstpl_main_loop_unref_();
 	free(ctx);
 }
 
 void gstpl_ctx_start(Context* ctx) {
-	gstpl_main_loop_ref_();
-
 	gst_element_set_state(ctx->pipeline, GST_STATE_PLAYING);
 }

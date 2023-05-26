@@ -84,6 +84,7 @@ func TestPipelineCloseWhilePlaying(t *testing.T) {
 		pl.Close()
 	}()
 
+	pl.Start()
 	for {
 		sample, err := pl.Recv()
 		if errors.Is(err, io.EOF) {
@@ -97,6 +98,27 @@ func TestPipelineCloseWhilePlaying(t *testing.T) {
 	elapsed := time.Since(t0)
 	require.Greater(elapsed.Milliseconds(), int64(99))
 	require.Less(elapsed.Milliseconds(), int64(150))
+}
+
+func TestPipelineError(t *testing.T) {
+	require := require.New(t)
+
+	pl, err := gstpl.NewPipeline("filesrc location=not-exists.mp4")
+	require.NoError(err)
+	defer pl.Close()
+
+	t0 := time.Now()
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		pl.Start()
+	}()
+
+	_, err = pl.Recv()
+	require.Error(err)
+	require.GreaterOrEqual(time.Since(t0).Milliseconds(), int64(100))
+
+	_, err = pl.Recv()
+	require.Error(err)
 }
 
 func TestPipelineStartTwice(t *testing.T) {
@@ -185,6 +207,34 @@ func TestMultiplePipelines(t *testing.T) {
 		require.True(t2b.After(t1a))
 		require.True(t2b.After(t2a))
 	})
+
+	t.Run("parallel with one paused", func(t *testing.T) {
+		require := require.New(t)
+
+		// 33.3ms per frame.
+		pl1, err := gstpl.NewPipeline("videotestsrc ! video/x-raw,framerate=30/1")
+		require.NoError(err)
+
+		pl2, err := gstpl.NewPipeline("videotestsrc num-buffers=2 ! video/x-raw,framerate=30/1")
+		require.NoError(err)
+
+		var wg sync.WaitGroup
+		defer wg.Wait()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := pl1.Start()
+			require.NoError(err)
+
+			// One blocked (no-recv) does not block the other pipelines.
+			time.Sleep(100 * time.Millisecond)
+		}()
+
+		t0 := time.Now()
+		play(require, pl2)
+		require.Less(time.Since(t0).Milliseconds(), int64(100))
+	})
 }
 
 func TestStartClosedPipeline(t *testing.T) {
@@ -214,7 +264,6 @@ func TestRecvFromClosedPipeline(t *testing.T) {
 func TestPipelineEndOfStream(t *testing.T) {
 	require := require.New(t)
 
-	// pl, err := gstpl.NewPipeline("fakesrc num-buffers=5 datarate=100 filltype=random sizetype=random sizemin=5 sizemax=10")
 	pl, err := gstpl.NewPipeline("videotestsrc num-buffers=5")
 	require.NoError(err)
 	defer pl.Close()
