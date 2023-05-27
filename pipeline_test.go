@@ -58,6 +58,7 @@ func TestPipelineRecv(t *testing.T) {
 	err = pl.Start()
 	require.NoError(err)
 
+	i := 0
 	for {
 		sample, err := pl.Recv()
 		if errors.Is(err, io.EOF) {
@@ -66,6 +67,8 @@ func TestPipelineRecv(t *testing.T) {
 
 		require.NoError(err)
 		require.Len(sample.Data, 42)
+		require.Equal(uint(i*42), sample.Offset)
+		i++
 	}
 
 	err = pl.Close()
@@ -208,7 +211,7 @@ func TestMultiplePipelines(t *testing.T) {
 		require.True(t2b.After(t2a))
 	})
 
-	t.Run("parallel with one paused", func(t *testing.T) {
+	t.Run("parallel with one blocked", func(t *testing.T) {
 		require := require.New(t)
 
 		// 33.3ms per frame.
@@ -273,7 +276,7 @@ func TestPipelineEndOfStream(t *testing.T) {
 
 	i := 0
 	for ; i < 10; i++ {
-		var sample gstpl.Sample
+		var sample *gstpl.Sample
 		sample, err = pl.Recv()
 		if errors.Is(err, io.EOF) {
 			break

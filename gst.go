@@ -11,6 +11,15 @@ import (
 	"unsafe"
 )
 
+type Sample struct {
+	Data      []byte
+	Pts       time.Duration
+	Dts       time.Duration
+	Duration  time.Duration
+	Offset    uint
+	OffsetEnd uint
+}
+
 func gerror(gerr *C.GError) error {
 	if gerr == nil {
 		return nil
@@ -29,13 +38,20 @@ func goHandleEndOfStream(handler unsafe.Pointer) {
 }
 
 //export goHandleSample
-func goHandleSample(handler unsafe.Pointer, buff unsafe.Pointer, len C.int, duration C.int) {
+func goHandleSample(handler unsafe.Pointer, data unsafe.Pointer, len C.int, buff *C.GstBuffer) {
 	pl := (*pipeline)(handler)
-	sample := Sample{Data: C.GoBytes(buff, len), Duration: time.Duration(duration)}
+	s := &Sample{
+		Data:      C.GoBytes(data, len),
+		Pts:       time.Duration(buff.pts),
+		Dts:       time.Duration(buff.dts),
+		Duration:  time.Duration(buff.duration),
+		Offset:    uint(buff.offset),
+		OffsetEnd: uint(buff.offset_end),
+	}
 
 	select {
 	case <-pl.ctx.Done():
-	case pl.samples <- sample:
+	case pl.samples <- s:
 	}
 }
 

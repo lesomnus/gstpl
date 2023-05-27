@@ -9,26 +9,20 @@ import (
 	"context"
 	"io"
 	"sync/atomic"
-	"time"
 	"unsafe"
 )
-
-type Sample struct {
-	Data     []byte
-	Duration time.Duration
-}
 
 // Pipeline represents a GStreamer pipeline instance.
 type Pipeline interface {
 	Start() error
-	Recv() (Sample, error)
+	Recv() (*Sample, error)
 	Close() error
 }
 
 type pipeline struct {
 	gst_ctx *C.Context
 	got_err chan struct{}
-	samples chan Sample
+	samples chan *Sample
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -55,7 +49,7 @@ func NewPipeline(expr string) (Pipeline, error) {
 	pl := &pipeline{
 		gst_ctx: gst_ctx,
 		got_err: make(chan struct{}, 1),
-		samples: make(chan Sample),
+		samples: make(chan *Sample),
 
 		ctx:    ctx,
 		cancel: cancel,
@@ -74,16 +68,16 @@ func (p *pipeline) Start() error {
 	return nil
 }
 
-func (p *pipeline) Recv() (Sample, error) {
+func (p *pipeline) Recv() (*Sample, error) {
 	select {
 	case <-p.ctx.Done():
-		return Sample{}, io.EOF
+		return nil, io.EOF
 
 	case sample := <-p.samples:
 		return sample, nil
 
 	case <-p.got_err:
-		return Sample{}, p.err.Load().(error)
+		return nil, p.err.Load().(error)
 	}
 }
 

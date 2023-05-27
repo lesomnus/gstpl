@@ -11,7 +11,7 @@ typedef struct Context {
 } Context;
 
 extern void goHandleEndOfStream(void* handler);
-extern void goHandleSample(void* handler, void* buffer, int bufferLen, int duration);
+extern void goHandleSample(void* handler, void* buffer, int bufferLen, GstBuffer* buff);
 extern void goHandleError(void* handler, GError* error);
 
 bool     gstpl_init(GError** err);

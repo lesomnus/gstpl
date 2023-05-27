@@ -128,7 +128,7 @@ static GstFlowReturn gstpl_handle_sample_(GstElement* object, gpointer data) {
 			gpointer copy      = NULL;
 			gsize    copy_size = 0;
 			gst_buffer_extract_dup(buffer, 0, gst_buffer_get_size(buffer), &copy, &copy_size);
-			goHandleSample(ctx->handler, copy, copy_size, GST_BUFFER_DURATION(buffer));
+			goHandleSample(ctx->handler, copy, copy_size, buffer);
 		}
 		gst_sample_unref(sample);
 	}
