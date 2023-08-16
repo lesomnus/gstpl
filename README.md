@@ -16,10 +16,9 @@ func main() {
 	// GStreamer pipeline expression;
 	// for example:
 	// expr := `v4l2src device=/dev/video0
-	// ! videoconvert
 	// ! video/x-raw,format=YUY2,width=640,height=480,framerate=30/1
-	// ! x264enc
-	// ! speed-preset=ultrafast tune=zerolatency bitrate=500
+	// ! videoconvert
+	// ! x264enc speed-preset=ultrafast tune=zerolatency bitrate=500
 	// `
 	expr := "videotestsrc"
 
