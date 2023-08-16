@@ -1,4 +1,4 @@
-FROM ghcr.io/lesomnus/dev-golang:1.19
+FROM ghcr.io/lesomnus/dev-golang:1.21
 
 RUN apt-get update \
 	&& apt-get install --yes --no-install-recommends \

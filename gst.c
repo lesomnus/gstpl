@@ -125,10 +125,11 @@ static GstFlowReturn gstpl_handle_sample_(GstElement* object, gpointer data) {
 	if(sample) {
 		GstBuffer* const buffer = gst_sample_get_buffer(sample);
 		if(buffer) {
-			gpointer copy      = NULL;
-			gsize    copy_size = 0;
-			gst_buffer_extract_dup(buffer, 0, gst_buffer_get_size(buffer), &copy, &copy_size);
-			goHandleSample(ctx->handler, copy, copy_size, buffer);
+			GstMapInfo map_info;
+			if(gst_buffer_map(buffer, &map_info, GST_MAP_READ)) {
+				goHandleSample(ctx->handler, map_info.data, map_info.size, buffer);
+				gst_buffer_unmap(buffer, &map_info);
+			}
 		}
 		gst_sample_unref(sample);
 	}
